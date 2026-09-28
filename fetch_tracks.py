@@ -4,7 +4,19 @@ from spotipy.oauth2 import SpotifyOAuth
 from config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI
 import requests
 
+# 1. Obtenir un token (Client Credentials Flow)
+def get_spotify_token():
+    auth_url = "https://accounts.spotify.com/api/token"
+    auth_response = requests.post(
+        auth_url,
+        data={"grant_type": "client_credentials"},
+        auth=(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET)
+    )
+    auth_response.raise_for_status()
+    return auth_response.json()["access_token"]
 # Portées (scopes) nécessaires pour récupérer tes morceaux
+
+
 SCOPE = [
     "user-read-recently-played",  # Pour récupérer ton historique récent
     "user-top-read"                # Pour récupérer tes morceaux préférés
@@ -29,45 +41,34 @@ for idx, item in enumerate(recent_tracks['items'], 1):
     print(f"{idx}. {track['name']} - {artists} (ID: {track['id']}) | Écoute le {played_at}")
 
 
-# Récupère les IDs des 10 derniers morceaux
-track_ids = [item['track']['id'] for item in recent_tracks['items']]
-print(track_ids)
+import requests
 
-"""
-# Récupère les features audio pour ces IDs
-for track_id in track_ids:
-    print(track_id)
-    feature = sp.audio_analysis(track_id)
-    print(feature)
-"""
-#Pas du même mode - Big flo et Oli
-track_id = '4REI5iyrSBuKNH0sIOk0Qj'
-# URL de l'API miroir musicae.io (endpoint audio-features)
-url = f"https://api.musicae.io/spotify-audio-features?ids={track_id}"
+RECCO_URL = "https://api.reccobeats.com/v1/audio-features"
 
-response = requests.get(url)
-print(response.status_code)
-data = response.json
-print(data)
-"""
-data = response.json()
+def get_audio_features(spotify_ids):
+    """Récupère les audio features via ReccoBeats à partir d'IDs Spotify."""
+    response = requests.get(
+        RECCO_URL,
+        params={"ids": ",".join(spotify_ids)},
+        headers={"Accept": "application/json"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    data = response.json()
+    # La réponse est généralement de la forme {"content": [ ... ]}
+    return data.get("content", data) if isinstance(data, dict) else data
 
-# Le service retourne généralement une liste d'objets si plusieurs IDs sont envoyés
-features = data.get('audio_features', [])
+# --- suite de ton script ---
+track_ids = [item["track"]["id"] for item in recent_tracks["items"]]
+track_names = {item["track"]["id"]: item["track"]["name"] for item in recent_tracks["items"]}
 
-if features:
-    track_data = features[0]
-    print(track_data)
+features = get_audio_features(track_ids)
 
-# Affiche les features pour chaque morceau
-print("\n📊 Features audio pour tes 10 derniers morceaux :")
-for idx, (item, feature) in enumerate(zip(recent_tracks['items'], features), 1):
-    track = item['track']
-    artists = ', '.join([artist['name'] for artist in track['artists']])
-    print(f"{idx}. {track['name']} - {artists}")
-    print(f"   - Danseabilité : {feature['danceability']:.2f}")
-    print(f"   - Énergie : {feature['energy']:.2f}")
-    print(f"   - Tempo (BPM) : {feature['tempo']:.1f}")
-    print(f"   - Speechiness (parole) : {feature['speechiness']:.2f}")
-    print("---")
-"""
+for f in features:
+    # L'objet renvoyé contient un "href" pointant vers l'URL Spotify du morceau
+    spotify_id = f.get("href", "").rstrip("/").split("/")[-1]
+    print(track_names.get(spotify_id, spotify_id))
+    for key in ("danceability", "energy", "valence", "tempo",
+                "acousticness", "instrumentalness", "liveness",
+                "speechiness", "loudness"):
+        print(f"  {key}: {f.get(key)}")
