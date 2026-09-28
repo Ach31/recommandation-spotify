@@ -40,9 +40,7 @@ for idx, item in enumerate(recent_tracks['items'], 1):
     played_at = item['played_at']  # Date et heure d'écoute
     print(f"{idx}. {track['name']} - {artists} (ID: {track['id']}) | Écoute le {played_at}")
 
-
-import requests
-
+# API reccobeats to have the audio features
 RECCO_URL = "https://api.reccobeats.com/v1/audio-features"
 
 def get_audio_features(spotify_ids):
@@ -58,10 +56,11 @@ def get_audio_features(spotify_ids):
     # La réponse est généralement de la forme {"content": [ ... ]}
     return data.get("content", data) if isinstance(data, dict) else data
 
-# --- suite de ton script ---
+
 track_ids = [item["track"]["id"] for item in recent_tracks["items"]]
 track_names = {item["track"]["id"]: item["track"]["name"] for item in recent_tracks["items"]}
 
+# get audio features of track_ids
 features = get_audio_features(track_ids)
 
 for f in features:
