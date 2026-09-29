@@ -3,6 +3,8 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from config import SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI
 import requests
+import pandas as pd
+from IPython.display import display
 
 # 1. Obtenir un token (Client Credentials Flow)
 def get_spotify_token():
@@ -63,6 +65,17 @@ track_names = {item["track"]["id"]: item["track"]["name"] for item in recent_tra
 # get audio features of track_ids
 features = get_audio_features(track_ids)
 
+#create a dataframe of features
+features_df = pd.DataFrame(features)
+#print(features_df.columns)
+#create a matrix which contain audio features only
+matrix = features_df.iloc[1:11, 3:14]
+display(matrix)
+#matrix.columns=features.index
+
+#display(matrix.head())
+#print(df['tempo'])
+"""
 for f in features:
     # L'objet renvoyé contient un "href" pointant vers l'URL Spotify du morceau
     spotify_id = f.get("href", "").rstrip("/").split("/")[-1]
@@ -71,3 +84,4 @@ for f in features:
                 "acousticness", "instrumentalness", "liveness",
                 "speechiness", "loudness"):
         print(f"  {key}: {f.get(key)}")
+"""
